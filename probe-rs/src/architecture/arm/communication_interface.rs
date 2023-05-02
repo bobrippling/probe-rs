@@ -89,7 +89,7 @@ pub trait ArmProbeInterface: DapAccess + SwdSequence + SwoAccess + Send {
     /// Returns the number of access ports the debug port has.
     ///
     /// If the target device has multiple debug ports, this will switch the active debug port
-    /// if necessary. This will also  
+    /// if necessary. This will also
     fn num_access_ports(&mut self, dp: DpAddress) -> Result<usize, ArmError>;
 
     /// Reads the chip info from the romtable of given debug port.
@@ -535,6 +535,24 @@ impl<'interface> ArmCommunicationInterface<Initialized> {
                 self.probe.replace(probe);
                 Err(err)
             }
+        }
+    }
+
+    /// Reset the cached state of the debug port.
+    ///
+    /// probe-rs caches which DP/AP is currently selected, to avoid having to
+    /// select it multiple times when performing multiple operations on the same
+    /// DP/AP. This function clears this cache.
+    ///
+    /// This can be needed with some kinds of target reset, as the state of the
+    /// DP/AP might have been reset.
+    ///
+    /// FIXME: docs are wrong
+    pub fn clear_state(&mut self) {
+        //self.state.current_dp = None; // BUH
+        self.state.dps.clear();
+        if let Err(e) = self.reinitialize() {
+            panic!("reinit err: {e:?}"); // TODO: propagate out
         }
     }
 
