@@ -233,6 +233,7 @@ impl RttActiveChannel {
                     }
                     Err(err) => {
                         if matches!(err, probe_rs::rtt::Error::Probe(_)) {
+                            log::warn!("\nRead from probe hang ({}), sleeping", err);
                             std::thread::sleep(std::time::Duration::from_millis(50));
                         } else {
                             log::error!("\nError reading from RTT: {}", err);
