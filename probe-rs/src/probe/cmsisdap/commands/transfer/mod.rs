@@ -214,6 +214,9 @@ impl Request for TransferRequest {
             protocol_error: buffer[1] & 0x8 != 0,
             value_mismatch: buffer[1] & 0x10 != 0,
         };
+        if last_transfer_response.protocol_error {
+            tracing::error!("protocol error, bytes: {:?}", buffer);
+        }
         let mut buffer = &buffer[2..];
 
         let mut transfers = Vec::with_capacity(transfer_count);

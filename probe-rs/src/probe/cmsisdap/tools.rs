@@ -1,4 +1,4 @@
-use std::{cell::RefCell, net::TcpStream, time::Duration};
+use std::{cell::RefCell, net::TcpStream/*, time::Duration*/};
 
 use super::CmsisDapDevice;
 use crate::probe::{
@@ -238,8 +238,8 @@ pub fn open_device_from_selector(
 
     if let Some(ref serial) = selector.serial_number {
         tracing::debug!("Attempting to open device by serial number: {}", serial);
-        let socket = TcpStream::connect(serial).map_err(|_e| {
-            tracing::debug!("Failed to open device by serial number: {}, {}", serial, _e);
+        let socket = TcpStream::connect(serial).map_err(|e| {
+            tracing::error!("Failed to open device by serial number: {}, {}", serial, e);
             ProbeCreationError::NotFound
         })?;
         return Ok(CmsisDapDevice::Tcp {

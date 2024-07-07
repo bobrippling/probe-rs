@@ -126,7 +126,10 @@ impl CmsisDap {
 
         // Determine and set the packet size. We do this as soon as possible after
         // opening the probe to ensure all future communication uses the correct size.
-        let packet_size = device.find_packet_size()? as u16;
+        let packet_size = device.find_packet_size().map_err(|e| {
+            tracing::error!("find_packet_size: {e}");
+            e
+        })? as u16;
 
         // Read remaining probe information.
         let packet_count = commands::send_command(&mut device, PacketCountCommand {})?;

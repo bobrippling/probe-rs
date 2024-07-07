@@ -117,8 +117,11 @@ impl CmsisDapDevice {
                 .map_err(SendError::UsbError),
             CmsisDapDevice::Tcp { socket, .. } => {
                 let mut socket = socket.borrow_mut();
-                socket.set_read_timeout(Some(TCP_TIMEOUT));
-                socket.read(buf).map_err(SendError::UsbError)
+                socket.set_read_timeout(Some(TCP_TIMEOUT)).unwrap();
+                socket.read(buf).map_err(|e| {
+                    tracing::error!("reading tcp: {}", e);
+                    SendError::UsbError(e)
+                })
             }
         }
     }
@@ -136,7 +139,7 @@ impl CmsisDapDevice {
             CmsisDapDevice::Tcp { socket, .. } => {
                 // Skip first byte as it's set to 0 for HID transfers
                 let mut socket = socket.borrow_mut();
-                socket.set_write_timeout(Some(TCP_TIMEOUT));
+                //socket.set_write_timeout(Some(TCP_TIMEOUT));
                 let count = socket.write(&buf[1..]).unwrap();
                 Ok(count)
             }
@@ -183,7 +186,7 @@ impl CmsisDapDevice {
             } => {
                 let mut discard = vec![0u8; *max_packet_size];
                 let mut socket = socket.borrow_mut();
-                socket.set_read_timeout(Some(Duration::from_millis(1)));
+                socket.set_read_timeout(Some(Duration::from_millis(1))).unwrap();
                 loop {
                     match socket.read(&mut discard) {
                         Ok(n) if n != 0 => continue,
@@ -366,9 +369,12 @@ pub(crate) fn send_command<Req: Request>(
     device: &mut CmsisDapDevice,
     request: Req,
 ) -> Result<Req::Response, CmsisDapError> {
-    send_command_inner(device, request).map_err(|e| CmsisDapError::Send {
-        command_id: Req::COMMAND_ID,
-        source: e,
+    send_command_inner(device, request).map_err(|e| {
+        tracing::error!("send_command error: {e}");
+        CmsisDapError::Send {
+            command_id: Req::COMMAND_ID,
+            source: e,
+        }
     })
 }
 
@@ -393,7 +399,10 @@ fn send_command_inner<Req: Request>(
 
     // Leave byte 0 as the HID report, and write the command and request to the buffer.
     buffer[1] = Req::COMMAND_ID as u8;
-    let mut size = request.to_bytes(&mut buffer[2..])? + 2;
+    let mut size = request.to_bytes(&mut buffer[2..]).map_err(|e| {
+        tracing::error!("to_bytes");
+        e
+    })? + 2;
 
     // For HID devices we must write a full report every time,
     // so set the transfer size to the report size, plus one
@@ -404,11 +413,17 @@ fn send_command_inner<Req: Request>(
     }
 
     // Send buffer to the device.
-    let _ = device.write(&buffer[..size])?;
+    let _ = device.write(&buffer[..size]).map_err(|e| {
+        tracing::error!("write()");
+        e
+    })?;
     trace_buffer("Transmit buffer", &buffer[..size]);
 
     // Read back response.
-    let bytes_read = device.read(&mut buffer)?;
+    let bytes_read = device.read(&mut buffer).map_err(|e| {
+        tracing::error!("read()");
+        e
+    })?;
     let response_data = &buffer[..bytes_read];
     trace_buffer("Receive buffer", response_data);
 
