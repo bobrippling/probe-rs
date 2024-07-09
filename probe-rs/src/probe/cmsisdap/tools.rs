@@ -241,11 +241,14 @@ pub fn open_device_from_selector(
         let socket = TcpStream::connect(serial).map_err(|e| {
             tracing::error!("Failed to open device by serial number: {}, {}", serial, e);
             ProbeCreationError::NotFound
-        })?;
-        return Ok(CmsisDapDevice::Tcp {
-            socket: RefCell::new(socket),
-            max_packet_size: 64,
         });
+        if let Ok(socket) = socket {
+            return Ok(CmsisDapDevice::Tcp {
+                socket: RefCell::new(socket),
+                max_packet_size: 64,
+            });
+        }
+        tracing::warn!("couldn't open tcp \"serial\" {serial}");
     }
 
     // We need to use nusb to detect the proper HID interface to use
