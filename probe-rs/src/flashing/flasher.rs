@@ -909,7 +909,7 @@ impl<'p> ActiveFlasher<'p, Program> {
             .call_function_and_wait(
                 &Registers {
                     pc: into_reg(self.flash_algorithm.pc_program_page)?,
-                    r0: Some(into_reg(address)?),
+                    r0: Some(into_reg(hack_address(address))?),
                     r1: Some(bytes.len() as u32),
                     r2: Some(into_reg(begin_data)?),
                     r3: None,
@@ -959,7 +959,7 @@ impl<'p> ActiveFlasher<'p, Program> {
 
         self.call_function(
             &Registers {
-                pc: into_reg(self.flash_algorithm.pc_program_page)?,
+                pc: into_reg(hack_address(self.flash_algorithm.pc_program_page))?,
                 r0: Some(into_reg(address)?),
                 r1: Some(self.flash_algorithm.flash_properties.page_size),
                 r2: Some(into_reg(buffer_address)?),
@@ -986,4 +986,17 @@ impl<'p> ActiveFlasher<'p, Program> {
 
         Ok(())
     }
+}
+
+fn hack_address(addr: u64) -> u64 {
+    const A_SECT_SIZE: u64 = todo!();
+    let new = addr + A_SECT_SIZE;
+
+    tracing::info!(
+        "ALMIGHTY HACK: adjusting addr {:#08x} -> {:#08x}",
+        addr,
+        new,
+    );
+
+    new
 }
