@@ -486,7 +486,31 @@ impl<'probe> CoreInterface for Armv6m<'probe> {
     }
 
     fn status(&mut self) -> Result<crate::core::CoreStatus, Error> {
-        let dhcsr = Dhcsr(self.memory.read_word_32(Dhcsr::get_mmio_address())?);
+        //tracing::warn!("sleeping before reading status...");
+        //std::thread::sleep(Duration::from_millis(1000));
+        //tracing::warn!("slept");
+
+        let dhcsr = Dhcsr(self.memory.read_word_32(Dhcsr::get_mmio_address()).map_err(|e| {
+            tracing::error!("error reading Dhcsr, sleeping...");
+            std::thread::sleep(Duration::from_millis(5000));
+            tracing::warn!("slept");
+            e
+        })?);
+        //                            ^^^^^^^^^^^^ suspect this is the error ^
+        //
+        // and that something is going wrong either when we try to halt core1,
+        // or before then and we're seeing the outcome of that.
+        //
+        // probably interrupts or something else running on core0?
+        //
+        // backtrace:
+        // CoreInterface::status()
+        // CoreInterface::core_halted()
+        // CoreInterface::wait_for_core_halted() # armv6m
+        // Core::halt()
+        // Session::halted_access()
+        // Session::clear_all_hw_breakpoints()
+        // Session::new()
 
         if dhcsr.s_lockup() {
             tracing::warn!(
@@ -571,6 +595,7 @@ impl<'probe> CoreInterface for Armv6m<'probe> {
         let mut value = Dhcsr(0);
         value.set_c_halt(true);
         value.set_c_debugen(true);
+        value.set_c_maskints(false); // already set above Dhcsr(0)
         value.enable_write();
 
         self.memory

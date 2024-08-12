@@ -140,7 +140,10 @@ impl Session {
         attach_method: AttachMethod,
         permissions: Permissions,
     ) -> Result<Self, Error> {
-        let (probe, target) = get_target_from_selector(target, attach_method, probe)?;
+        let (probe, target) = get_target_from_selector(target, attach_method, probe).map_err(|e| {
+            tracing::error!("error 1");
+            e
+        })?;
 
         let cores = target
             .cores
@@ -157,9 +160,15 @@ impl Session {
             .collect();
 
         let mut session = if let Architecture::Arm = target.architecture() {
-            Self::attach_arm(probe, target, attach_method, permissions, cores)?
+            Self::attach_arm(probe, target, attach_method, permissions, cores).map_err(|e| {
+                tracing::error!("error 2");
+                e
+            })?
         } else {
-            Self::attach_jtag(probe, target, attach_method, permissions, cores)?
+            Self::attach_jtag(probe, target, attach_method, permissions, cores).map_err(|e| {
+                tracing::error!("error 3");
+                e
+            })?
         };
 
         session.clear_all_hw_breakpoints()?;
@@ -448,6 +457,7 @@ impl Session {
             let status = c.status()?;
             tracing::info!("Core status: {:?}", status);
             if !status.is_halted() {
+                // comment these to get it working
                 tracing::info!("Halting core...");
                 resume_state.push(core);
                 c.halt(Duration::from_millis(100))?;
