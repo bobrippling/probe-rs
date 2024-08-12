@@ -109,7 +109,7 @@ variants:
     access:
       boot: true
   flash_algorithms:
-  - algo
+  - nop_ipc
 - name: RP2040_SELFDEBUG
   cores:
   - name: core0
@@ -157,7 +157,7 @@ variants:
     access:
       boot: true
   flash_algorithms:
-  - algo
+  - nop_ipc
 - name: RP2040_CORE0
   cores:
   - name: core0
@@ -209,7 +209,6 @@ variants:
 flash_algorithms:
 - name: algo
   description: algo
-  default: true
   instructions: 8LWFsB5MfEQgeAEoAdEA8Dv4ASAEkCBwFU4wRvcwAPCJ+AOUBEYTT7gcAPCD+AVGMEYA8H/4ApAPSADwe/gBkA5IAPB3+AZGOEYA8HP4B0agR6hHC0h4RDDAApkBYAGZBDDCwASYA5kIcAAgBbDwvVJFAABDWAAAUlAAAEZDAABeAQAA9gAAALC1CEx8RCB4ASgI0QZNfUQoaYBHaGmARwAgIHCwvQEgsL3ARtgAAAC2AAAABUh4RAB4ACgB0QEgcEcBSHBHwEbQcAAArgAAABC1Ckl5RAl4ASkM0Q8hCQdAGAdJeUSMaAEiEQMSBNgjoEcAIBC9ASAQvcBGkAAAAGgAAAAQtQtGCEl5RAl4ASkK0Q8hCQdAGAVJeUTMaBFGGkagRwAgEL0BIBC9WgAAADIAAACAshQhCYiJHkqIACoE0AkdgkL50QiIcEf+3tTUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANTU1A==
   pc_init: 0x1
   pc_uninit: 0x89
@@ -218,12 +217,34 @@ flash_algorithms:
   data_section_offset: 0x0
   flash_properties:
     address_range:
-      start: 0x10000000
+      start: 0x10000000 # code loaded here (since there's no load_address)
       end: 0x18000000
     page_size: 0x1000
     erased_byte_value: 0xff
     program_page_timeout: 1000
     erase_sector_timeout: 3000
+    sectors:
+    - size: 0x1000
+      address: 0x0
+  cores:
+  - core0
+- name: nop_ipc
+  description: do nothing, wait for selfdebug to pick things up
+  default: true
+  instructions: gLUArwhL0rJYYJlg2mC/81+PASAYcBh4ACgD0AC/GHgAKPvRACCAvfD/AyCAtQCvCUkAIsCySGCKYMpgv/NfjwIgCHAIeAAoA9AAvwh4ACj70QAggL3ARvD/AyCAtQCvCEtYYJlg2mC/81+PAyAYcBh4ACgD0AC/GHgAKPvRACCAvcBG8P8DIIC1AK8ISQAiSGCKYMpgv/NfjwQgCHAIeAAoA9AAvwh4ACj70QAggL3w/wMg
+  pc_init: 0x1
+  pc_uninit: 0x2d
+  pc_program_page: 0x5d
+  pc_erase_sector: 0x89
+  data_section_offset: 0x0
+  flash_properties:
+    address_range:
+      start: 0x10000000 # code loaded here (since there's no load_address)
+      end: 0x18000000
+    page_size: 0x1000
+    erased_byte_value: 0xff
+    program_page_timeout: 60000 # FIXME: hacked for now
+    erase_sector_timeout: 60000
     sectors:
     - size: 0x1000
       address: 0x0
