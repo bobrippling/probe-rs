@@ -231,7 +231,7 @@ flash_algorithms:
 - name: nop_ipc
   description: do nothing, wait for selfdebug to pick things up
   default: true
-  instructions: gLUArwhL0rJYYJlg2mC/81+PASAYcBh4ACgD0AC/GHgAKPvRACCAvfD/AyCAtQCvCUkAIsCySGCKYMpgv/NfjwIgCHAIeAAoA9AAvwh4ACj70QAggL3ARvD/AyCAtQCvCEtYYJlg2mC/81+PAyAYcBh4ACgD0AC/GHgAKPvRACCAvcBG8P8DIIC1AK8ISQAiSGCKYMpgv/NfjwQgCHAIeAAoA9AAvwh4ACj70QAggL3w/wMg
+  instructions: gLUArwVL0rJYYJlg2mC/81+PASAYcP/3/v/ARgAABCCAtQCvBUkAIsCySGCKYMpgv/NfjwIgCHD/9/7/AAAEIIC1AK8ES1hgmWDaYL/zX48DIBhw//f+/wAABCCAtQCvBUkAIkhgimDKYL/zX48EIAhw//f+/8BGAAAEIA==
   pc_init: 0x1
   pc_uninit: 0x2d
   pc_program_page: 0x5d
