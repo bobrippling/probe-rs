@@ -727,6 +727,24 @@ impl<'probe, O: Operation> ActiveFlasher<'probe, O> {
         let mut timeout_ocurred = true;
         while start.elapsed() < timeout {
             match self.core.status()? {
+                crate::CoreStatus::Sleeping => {
+                    // huge hack - can't get the core to halt so wait for this
+                    tracing::trace!("sleeping - moving to halt...");
+                    self.core
+                        .halt(Duration::from_millis(100))
+                        .map_err(|e| {
+                            tracing::warn!("error halting core: {}", e);
+                            FlashError::Core(e)
+                        })?;
+
+                    // dupe of below
+                    timeout_ocurred = false;
+                    self.read_rtt().map_err(|e| {
+                        tracing::warn!("POINT 2 (0)");
+                        e
+                    })?;
+                    break;
+                }
                 crate::CoreStatus::Halted(_) => {
                     timeout_ocurred = false;
                     // Once the core is halted we know for sure all RTT data is written
