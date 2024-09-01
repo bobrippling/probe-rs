@@ -232,11 +232,11 @@ flash_algorithms:
   description: do nothing, wait for selfdebug to pick things up
   default: true
   stack_overflow_check: false  # TODO: enable this and figure out why it's sometimes triggering
-  instructions: C0vSslhgmWDaYL/zX48BIBhwGHgAKAjQGHgAKAXQGHgAKALQGHgAKPPRML/95/7eAAAEIAxJACLAskhgimDKYL/zX48CIAhwCHgAKAjQCHgAKAXQCHgAKALQCHgAKPPRML/95/7ewEYAAAQgC0tYYJlg2mC/81+PAyAYcBh4ACgI0Bh4ACgF0Bh4ACgC0Bh4ACjz0TC//ef+3sBGAAAEIAtJACJIYIpgymC/81+PBCAIcAh4ACgI0Ah4ACgF0Ah4ACgC0Ah4ACjz0TC//ef+3gAABCA=
-  pc_init: 0x1
-  pc_uninit: 0x2d
-  pc_program_page: 0x5d
-  pc_erase_sector: 0x89
+  instructions: gLUArwhIAXgAKQjQAXgAKQXQAXgAKQLQAXgAKfPRACAwv/3n/t7ARgAABCCAtQCvBkvSslhgmWDaYL/zX48BIBhwv/Nfj//32//ARgAABCCAtQCvBkkAIsCySGCKYMpgv/NfjwIgCHC/81+P//fI/wAABCCAtQCvBUtYYJlg2mC/81+PAyAYcL/zX4//97j/AAAEIIC1AK8GSQAiSGCKYMpgv/NfjwQgCHC/81+P//en/8BGAAAEIA==
+  pc_init: 0x2d
+  pc_uninit: 0x51
+  pc_program_page: 0x75
+  pc_erase_sector: 0x95
   data_section_offset: 0x0
   flash_properties:
     address_range:
