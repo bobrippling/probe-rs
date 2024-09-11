@@ -618,7 +618,10 @@ impl<'probe, O: Operation> ActiveFlasher<'probe, O> {
         duration: Duration,
     ) -> Result<u32, FlashError> {
         self.call_function(registers, init)?;
-        self.wait_for_completion(duration)
+        tracing::debug!("call_function_and_wait(): call_function success");
+        let tmp = self.wait_for_completion(duration)?;
+        tracing::debug!("call_function_and_wait(): wait_for_completion success");
+        Ok(tmp)
     }
 
     fn call_function(&mut self, registers: &Registers, init: bool) -> Result<(), FlashError> {
@@ -718,15 +721,19 @@ impl<'probe, O: Operation> ActiveFlasher<'probe, O> {
 
     #[tracing::instrument(skip(self))]
     pub(super) fn wait_for_completion(&mut self, timeout: Duration) -> Result<u32, FlashError> {
-        tracing::debug!("Waiting for routine call completion.");
+        tracing::warn!("Waiting for routine call completion.");
         let regs = self.core.registers();
 
         // Wait until halted state is active again.
         let start = Instant::now();
 
         let mut timeout_ocurred = true;
+        let mut last = None;
         while start.elapsed() < timeout {
-            match self.core.status()? {
+            match self.core.status().map_err(|e| {
+                tracing::warn!("POINT 1");
+                e
+            })? {
                 crate::CoreStatus::Sleeping => {
                     // huge hack - can't get the core to halt so wait for this
                     tracing::trace!("sleeping - moving to halt...");
@@ -745,11 +752,15 @@ impl<'probe, O: Operation> ActiveFlasher<'probe, O> {
                     })?;
                     break;
                 }
+
                 crate::CoreStatus::Halted(_) => {
                     timeout_ocurred = false;
                     // Once the core is halted we know for sure all RTT data is written
                     // so we can read all of it.
-                    self.read_rtt()?;
+                    self.read_rtt().map_err(|e| {
+                        tracing::warn!("POINT 2");
+                        e
+                    })?;
                     break;
                 }
                 crate::CoreStatus::LockedUp => {
@@ -757,24 +768,43 @@ impl<'probe, O: Operation> ActiveFlasher<'probe, O> {
                         status: crate::CoreStatus::LockedUp,
                     });
                 }
-                _ => {
+                st => {
                     // All other statuses are okay: we'll just keep polling.
+                    let same = match last {
+                        None => false,
+                        Some(last) => st == last,
+                    };
+                    if !same {
+                        tracing::warn!("core is {:?}", st);
+                        last = Some(st);
+                    }
                 }
             }
 
             // Periodically read RTT.
-            self.read_rtt()?;
+            self.read_rtt().map_err(|e| {
+                tracing::warn!("POINT 2");
+                e
+            })?;
 
             std::thread::sleep(Duration::from_millis(1));
         }
 
-        self.check_for_stack_overflow()?;
+        self.check_for_stack_overflow().map_err(|e| {
+            tracing::warn!("POINT 3");
+            e
+        })?;
 
         if timeout_ocurred {
+            tracing::error!("POINT 4: timeout, core not halting");
             return Err(FlashError::Core(crate::Error::Timeout));
         }
 
-        let r: u32 = self.core.read_core_reg(regs.result_register(0))?;
+        let r: u32 = self.core.read_core_reg(regs.result_register(0)).map_err(|e| {
+            tracing::warn!("POINT 5 (error reading result reg): {}", e);
+            e
+        })?;
+        tracing::trace!("wait_for_completion: core halted ok");
         Ok(r)
     }
 

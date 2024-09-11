@@ -248,7 +248,7 @@ pub fn open_device_from_selector(
                 max_packet_size: 64,
             });
         }
-        tracing::warn!("couldn't open tcp \"serial\" {serial}");
+        tracing::warn!("^ couldn't open tcp \"serial\" {serial}, continuing...");
     }
 
     // We need to use nusb to detect the proper HID interface to use

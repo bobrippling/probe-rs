@@ -142,7 +142,11 @@ impl<T: DapAccess> ApAccess for T {
         PORT: AccessPort,
         R: ApRegister<PORT>,
     {
-        let raw_value = self.read_raw_ap_register(port.ap_address(), R::ADDRESS)?;
+        let raw_value = self.read_raw_ap_register(port.ap_address(), R::ADDRESS)
+            .map_err(|e| {
+                tracing::error!("read_ap_register ERROR HERE");
+                e
+            })?;
 
         tracing::Span::current().record("value", raw_value);
 
