@@ -15,7 +15,7 @@ use std::str::Utf8Error;
 use std::time::Duration;
 
 const USB_TIMEOUT: Duration = Duration::from_millis(1000);
-const TCP_TIMEOUT: Duration = Duration::from_millis(1000);
+const TCP_TIMEOUT: Duration = Duration::from_millis(30000);
 
 #[derive(Debug, thiserror::Error)]
 pub enum CmsisDapError {
@@ -117,10 +117,21 @@ impl CmsisDapDevice {
                 .map_err(SendError::UsbError),
             CmsisDapDevice::Tcp { socket, .. } => {
                 let mut socket = socket.borrow_mut();
+
                 socket.set_read_timeout(Some(TCP_TIMEOUT)).unwrap();
+                //socket.set_read_timeout(None).unwrap(); // don't timeout, just block
+
                 socket.read(buf).map_err(|e| {
                     tracing::error!("reading tcp: {}", e);
-                    SendError::UsbError(e)
+
+                    use std::io::ErrorKind::*;
+                    match e.kind() {
+                        TimedOut
+                        //| ResourceBusy
+                        | Interrupted
+                        => SendError::Timeout,
+                        _ => SendError::UsbError(e)
+                    }
                 })
             }
         }
