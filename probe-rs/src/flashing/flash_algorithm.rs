@@ -394,6 +394,7 @@ impl FlashAlgorithm {
         target: &Target,
     ) -> Result<FlashAlgorithm, FlashError> {
         // Find a RAM region from which we can run the algo.
+        // TODO: request memory range from device here
         let mm = &target.memory_map;
         let ram = mm
             .iter()
