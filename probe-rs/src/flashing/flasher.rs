@@ -72,30 +72,35 @@ impl<'session> Flasher<'session> {
         // - RP2040.yaml
         // - #[load_at_or_whatever=0x20005000]
         //   static mut PROBE_MEM: [u8; 4096];
-        let ram_region = if let ArchitectureInterface::Arm(probe) = session.interfaces {
-            probe.hw_mem_range()
-        } else {
-            None
-        };
+        // let ram_region = if let ArchitectureInterface::Arm(probe) = session.interfaces {
+        //     probe.hw_mem_range()
+        // } else {
+        //     None
+        // };
 
         let target = session.target();
 
-        let flash_algorith = match ram_region {
-            Some(ram_region) => {
-                FlashAlgorithm::assemble_from_raw_with_data(
-                    raw_flash_algorithm,
-                    ram_region,
-                    target,
-                )
-            }
-            None => {
-                FlashAlgorithm::assemble_from_raw_with_core(
-                    raw_flash_algorithm,
-                    &target.cores[core_index].name,
-                    target,
-                )
-            }
-        }?;
+        // let flash_algorithm = match ram_region {
+        //     Some(ram_region) => {
+        //         FlashAlgorithm::assemble_from_raw_with_data(
+        //             raw_flash_algorithm,
+        //             ram_region,
+        //             target,
+        //         )
+        //     }
+        //     None => {
+        //         FlashAlgorithm::assemble_from_raw_with_core(
+        //             raw_flash_algorithm,
+        //             &target.cores[core_index].name,
+        //             target,
+        //         )
+        //     }
+        // }?;
+        let flash_algorithm = FlashAlgorithm::assemble_from_raw_with_core(
+            raw_flash_algorithm,
+            &target.cores[core_index].name,
+            target,
+        )?;
 
         let mut this = Self {
             session,
