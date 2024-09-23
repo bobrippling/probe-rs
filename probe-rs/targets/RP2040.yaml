@@ -72,34 +72,40 @@ variants:
   memory_map:
   - !Ram
     range:
-      start: 0x20000000
+      start: 0x2003a000
       end: 0x20042000
     cores:
     - core1
-  - !Ram
-    range:
-      start: 0x21000000
-      end: 0x21010000
-    cores:
-    - core1
-  - !Ram
-    range:
-      start: 0x21010000
-      end: 0x21020000
-    cores:
-    - core1
-  - !Ram
-    range:
-      start: 0x21020000
-      end: 0x21030000
-    cores:
-    - core1
-  - !Ram
-    range:
-      start: 0x21030000
-      end: 0x21040000
-    cores:
-    - core1
+#  - !Ram
+#    range:
+#      start: 0x20000000
+#      end: 0x20042000
+#    cores:
+#    - core1
+#  - !Ram
+#    range:
+#      start: 0x21000000
+#      end: 0x21010000
+#    cores:
+#    - core1
+#  - !Ram
+#    range:
+#      start: 0x21010000
+#      end: 0x21020000
+#    cores:
+#    - core1
+#  - !Ram
+#    range:
+#      start: 0x21020000
+#      end: 0x21030000
+#    cores:
+#    - core1
+#  - !Ram
+#    range:
+#      start: 0x21030000
+#      end: 0x21040000
+#    cores:
+#    - core1
   - !Nvm
     range:
       start: 0x10000000
