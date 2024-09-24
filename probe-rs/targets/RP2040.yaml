@@ -237,7 +237,7 @@ flash_algorithms:
 - name: nop_ipc
   description: do nothing, wait for selfdebug to pick things up
   default: true
-  instructions: DUvSslhgmWDaYL/zX48BIBhwv/Nfjxh4ACgI0Bh4ACgF0Bh4ACgC0Bh4ACjz0QAgML/95/7ewEYAIAMgDUkAIsCySGCKYMpgv/NfjwIgCHC/81+PCHgAKAjQCHgAKAXQCHgAKALQCHgAKPPRACAwv/3n/t4AIAMgDEtYYJlg2mC/81+PAyAYcL/zX48YeAAoCNAYeAAoBdAYeAAoAtAYeAAo89EAIDC//ef+3gAgAyANSQAiSGCKYMpgv/NfjwQgCHC/81+PCHgAKAjQCHgAKAXQCHgAKALQCHgAKPPRACAwv/3n/t7ARgAgAyA=
+  instructions: DUvSslhgmWDaYL/zX48BIBhwv/Nfjxh4ACgI0Bh4ACgF0Bh4ACgC0Bh4ACjz0QAgML/95/7ewEYACAEgDUkAIsCySGCKYMpgv/NfjwIgCHC/81+PCHgAKAjQCHgAKAXQCHgAKALQCHgAKPPRACAwv/3n/t4ACAEgDEtYYJlg2mC/81+PAyAYcL/zX48YeAAoCNAYeAAoBdAYeAAoAtAYeAAo89EAIDC//ef+3gAIASANSQAiSGCKYMpgv/NfjwQgCHC/81+PCHgAKAjQCHgAKAXQCHgAKALQCHgAKPPRACAwv/3n/t7ARgAIASA=
   pc_init: 0x1
   pc_uninit: 0x3d
   pc_program_page: 0x79
@@ -245,7 +245,7 @@ flash_algorithms:
   data_section_offset: 0x0
   flash_properties:
     address_range:
-      start: 0x10000000 # area of flash we're capable of flashing
+      start: 0x10000000 # code loaded here (since there's no load_address)
       end: 0x18000000
     page_size: 0x1000
     erased_byte_value: 0xff
