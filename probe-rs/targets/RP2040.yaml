@@ -72,8 +72,8 @@ variants:
   memory_map:
   - !Ram
     range:
-      start: 0x2003a000
-      end: 0x20042000
+      start: 0x2000e000
+      end: 0x20010800
     cores:
     - core1
 #  - !Ram
