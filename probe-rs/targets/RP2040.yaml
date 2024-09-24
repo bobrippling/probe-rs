@@ -243,7 +243,6 @@ flash_algorithms:
   pc_program_page: 0x79
   pc_erase_sector: 0xb1
   data_section_offset: 0x0
-  load_address: 0x20000000 # reserved by self-debug
   flash_properties:
     address_range:
       start: 0x10000000 # area of flash we're capable of flashing
