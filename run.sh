@@ -37,7 +37,7 @@ case "$1" in
 
 		if test -z "$DEFMT_LOG"
 		then
-			export DEFMT_LOG=info,embassy_net_rp_self_debug=trace
+			export DEFMT_LOG=info #,embassy_net_rp_self_debug=trace
 			echo "$0: DEFMT_LOG defaulted to \"$DEFMT_LOG\""
 		fi
 		cargo run \
