@@ -72,8 +72,9 @@ variants:
   memory_map:
   - !Ram
     range:
-      start: 0x2000e000
-      end: 0x20010800
+      # USB DPRAM: aka rp_pac::USBCTRL_DPRAM
+      start: 0x50100000
+      end: 0x50101000
     cores:
     - core1
 #  - !Ram
