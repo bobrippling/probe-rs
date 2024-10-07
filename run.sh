@@ -22,7 +22,7 @@ fi
 
 cd "$(dirname "$0")"
 
-net_debug_dir=../../CoreDebug/embassy-net-rp-self-debug/
+net_debug_dir=../embassy-net-rp-self-debug/
 
 case "$1" in
 	wire)
@@ -65,5 +65,8 @@ case "$1" in
 			--log-file log-run.txt \
 			"$arm_bin"
 
+		;;
+	*)
+		usage
 		;;
 esac
