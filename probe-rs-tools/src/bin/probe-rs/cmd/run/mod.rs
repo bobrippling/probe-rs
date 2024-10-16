@@ -507,7 +507,7 @@ fn poll_rtt<S: Write + ?Sized>(
 fn attach_to_rtt(
     core: &mut Core<'_>,
     timeout: Duration,
-    _rtt_region: &ScanRegion,
+    rtt_region: &ScanRegion,
     elf_file: &Path,
     rtt_config: &RttConfig,
     timestamp_offset: UtcOffset,
@@ -517,17 +517,24 @@ fn attach_to_rtt(
     // fall back to the caller-provided scan regions.
     let elf = fs::read(elf_file)?;
 
+    /*
     let scan_region = ScanRegion::Range(0x20000000 .. 0x20042000);
     tracing::warn!("overridden RTT block location! (to {:x?})", scan_region);
+    // */
 
     /*
+    tracing::warn!("forcing scan for RTT block");
+    let scan_region = rtt_region.clone();
+    // */
+
+    // *
     tracing::warn!("not overriding RTT block location");
     let scan_region = if let Some(address) = RttActiveTarget::get_rtt_symbol_from_bytes(&elf) {
         ScanRegion::Exact(address)
     } else {
         rtt_region.clone()
     };
-    */
+    // */
 
     let rtt = try_attach_to_rtt(core, timeout, &scan_region)?;
 
