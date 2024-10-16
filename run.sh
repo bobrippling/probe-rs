@@ -40,6 +40,7 @@ case "$1" in
 			export DEFMT_LOG=info #,embassy_net_rp_self_debug=trace
 			echo "$0: DEFMT_LOG defaulted to \"$DEFMT_LOG\""
 		fi
+		export RUST_LOG=probe_rs::flashing=info,warn
 		cargo run \
 			--bin embassy-net-rp-self-debug \
 			--release
