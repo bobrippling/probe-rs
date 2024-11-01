@@ -527,7 +527,7 @@ fn attach_to_rtt(
     let scan_region = rtt_region.clone();
     // */
 
-    // *
+    //*
     tracing::warn!("not overriding RTT block location");
     let scan_region = if let Some(address) = RttActiveTarget::get_rtt_symbol_from_bytes(&elf) {
         ScanRegion::Exact(address)
