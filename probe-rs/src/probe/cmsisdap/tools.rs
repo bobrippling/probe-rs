@@ -241,7 +241,7 @@ pub fn open_device_from_selector(
         .map(|s| s.strip_prefix("tcp:"))
     {
         tracing::trace!("Attempting to open device at address: {}", address);
-        let socket = tcp::DurableStream::new(&address).map_err(|e| {
+        let socket = tcp::DurableStream::new(&address).map_err(|_e| {
             ProbeCreationError::NotFound
         })?;
         return Ok(CmsisDapDevice::Tcp {
