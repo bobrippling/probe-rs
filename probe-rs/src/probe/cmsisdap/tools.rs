@@ -235,10 +235,13 @@ pub fn open_device_from_selector(
 ) -> Result<CmsisDapDevice, ProbeCreationError> {
     tracing::trace!("Attempting to open device matching {}", selector);
 
-    if let Some(ref serial) = selector.serial_number {
-        tracing::debug!("Attempting to open device by serial number: {}", serial);
-        let socket = tcp::DurableStream::new(serial).map_err(|e| {
-            tracing::error!("Failed to open device by serial number: {}, {}", serial, e);
+    if let Some(Some(address)) = selector
+        .serial_number
+        .as_ref()
+        .map(|s| s.strip_prefix("tcp:"))
+    {
+        tracing::trace!("Attempting to open device at address: {}", address);
+        let socket = tcp::DurableStream::new(&address).map_err(|e| {
             ProbeCreationError::NotFound
         })?;
         return Ok(CmsisDapDevice::Tcp {

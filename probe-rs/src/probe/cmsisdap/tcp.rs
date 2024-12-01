@@ -66,7 +66,7 @@ impl DurableStream {
                     }
                     drop(sockref);
 
-                    tracing::error!(
+                    tracing::trace!(
                         "reconnect attempt {}/{}...",
                         attempt,
                         ATTEMPTS,
@@ -75,7 +75,7 @@ impl DurableStream {
                     match connected_socket(&self.address) {
                         Ok(socket) => {
                             *self.socket.borrow_mut() = socket;
-                            tracing::info!("reconnected, retrying {operation}");
+                            tracing::debug!("reconnected, retrying {operation}");
                         }
                         Err(e) => {
                             tracing::error!("error reconnecting: {}", e.kind());
