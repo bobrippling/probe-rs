@@ -1,4 +1,4 @@
-use std::io::ErrorKind::*;
+use std::io::ErrorKind;
 use std::net::SocketAddr;
 use std::{
     cell::RefCell,
@@ -59,7 +59,7 @@ impl DurableStream {
             }
         }
         Err(io::Error::new(
-            TimedOut,
+            ErrorKind::TimedOut,
             format!("Failed to reconnect after {} attempts", ATTEMPTS),
         ))
     }
@@ -103,6 +103,8 @@ impl DurableStream {
 // https://github.com/craftytrickster/stubborn-io/blob/bda25e38345f7bc2886877897ba70c2742867df1/src/tokio/io.rs#L27C5-L43C6
 
 fn is_disconnect_error(err: &io::Error) -> bool {
+    use ErrorKind::*;
+
     match err.kind() {
         NotFound | PermissionDenied | ConnectionRefused | ConnectionReset | ConnectionAborted
         | NotConnected | AddrInUse | AddrNotAvailable | BrokenPipe | AlreadyExists | WouldBlock => true,
