@@ -4,7 +4,7 @@ use std::{
     cell::RefCell,
     io,
     io::{Read, Write},
-    net::{TcpStream, ToSocketAddrs},
+    net::{TcpStream, ToSocketAddrs, Shutdown},
     time::Duration,
 };
 
@@ -28,31 +28,37 @@ impl DurableStream {
 
     fn with_reconnect(
         &self,
+        operation: &str,
         mut func: impl FnMut() -> Result<usize, io::Error>,
     ) -> Result<usize, io::Error> {
         for attempt in 1..=ATTEMPTS {
-            tracing::info!("Attempt {}/{}", attempt, ATTEMPTS);
             match func() {
                 Ok(count) => return Ok(count),
                 Err(error) => {
-                    tracing::info!(
-                        "Failed to read/write from socket due to error: {:?}",
-                        error
-                    );
+                    tracing::error!("{operation} on socket: {}", error.kind());
                     if !is_disconnect_error(&error) {
                         return Err(error);
                     }
 
-                    tracing::info!(
-                        "Reconnect attempt ({}/{}) due to error: {:?}",
+                    // in lieu of dropping the socket:
+                    let sockref = self.socket.borrow();
+                    if let Err(e) = sockref.shutdown(Shutdown::Both) {
+                        if e.kind() != ErrorKind::NotConnected {
+                            tracing::warn!("couldn't shutdown existing socket: {}", e.kind());
+                        }
+                    }
+                    drop(sockref);
+
+                    tracing::error!(
+                        "reconnect attempt {}/{}...",
                         attempt,
                         ATTEMPTS,
-                        error
                     );
+
                     match connected_socket(&self.address) {
                         Ok(socket) => {
                             *self.socket.borrow_mut() = socket;
-                            tracing::info!("reconnected, retrying");
+                            tracing::info!("reconnected, retrying {operation}");
                         }
                         Err(e) => {
                             tracing::error!("error reconnecting: {}", e.kind());
@@ -63,32 +69,21 @@ impl DurableStream {
         }
         Err(io::Error::new(
             ErrorKind::TimedOut,
-            format!("Failed to reconnect after {} attempts", ATTEMPTS),
+            format!("Failed to reconnect ({} attempts)", ATTEMPTS),
         ))
     }
 
     pub fn read(&self, buf: &mut [u8]) -> Result<usize, io::Error> {
-        self.with_reconnect(|| {
-            let mut socket = self.socket.borrow_mut();
-            socket.read(buf)
-        })
+        self.with_reconnect("read", || self.socket.borrow_mut().read(buf))
     }
 
     pub fn write(&self, buf: &[u8]) -> Result<usize, io::Error> {
-        self.with_reconnect(|| {
-            let mut socket = self.socket.borrow_mut();
-            socket.write(buf)
-        })
+        self.with_reconnect("write", || self.socket.borrow_mut().write(buf))
     }
 
-    pub fn drain(&self, buffer: &mut [u8]) {
-        let mut socket = self.socket.borrow_mut();
-        loop {
-            match socket.read(buffer) {
-                Ok(n) if n != 0 => continue,
-                // TODO: Should this reconnect?
-                _ => break,
-            }
+    pub fn drain(&self, buf: &mut [u8]) {
+        if let Err(e) = self.read(buf) {
+            tracing::warn!("socket drain: {}", e.kind());
         }
     }
 }
