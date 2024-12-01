@@ -39,24 +39,24 @@ impl DurableStream {
                         "Failed to read/write from socket due to error: {:?}",
                         error
                     );
-                    if is_disconnect_error(&error) {
-                        tracing::info!(
-                            "Reconnect attempt ({}/{}) due to error: {:?}",
-                            attempt,
-                            ATTEMPTS,
-                            error
-                        );
-                        match connected_socket(&self.address) {
-                            Ok(socket) => {
-                                *self.socket.borrow_mut() = socket;
-                                tracing::info!("reconnected, retrying");
-                            }
-                            Err(e) => {
-                                tracing::error!("error reconnecting: {}", e.kind());
-                            }
-                        }
-                    } else {
+                    if !is_disconnect_error(&error) {
                         return Err(error);
+                    }
+
+                    tracing::info!(
+                        "Reconnect attempt ({}/{}) due to error: {:?}",
+                        attempt,
+                        ATTEMPTS,
+                        error
+                    );
+                    match connected_socket(&self.address) {
+                        Ok(socket) => {
+                            *self.socket.borrow_mut() = socket;
+                            tracing::info!("reconnected, retrying");
+                        }
+                        Err(e) => {
+                            tracing::error!("error reconnecting: {}", e.kind());
+                        }
                     }
                 }
             }
