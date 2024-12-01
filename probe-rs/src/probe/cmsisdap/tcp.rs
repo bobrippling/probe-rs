@@ -8,7 +8,6 @@ use std::{
     time::Duration,
 };
 
-const TIMEOUT: Duration = Duration::from_millis(10000);
 const ATTEMPTS: usize = 5;
 
 pub struct DurableStream {
@@ -19,7 +18,8 @@ pub struct DurableStream {
 impl DurableStream {
     pub fn new(address: &impl ToSocketAddrs) -> Result<Self, io::Error> {
         let address = address.to_socket_addrs()?.next().expect("A valid address");
-        let socket = TcpStream::connect_timeout(&address, TIMEOUT)?;
+        let socket = connected_socket(&address)?;
+
         return Ok(DurableStream {
             address,
             socket: RefCell::new(socket),
@@ -46,11 +46,14 @@ impl DurableStream {
                             ATTEMPTS,
                             error
                         );
-                        if let Ok(socket) = TcpStream::connect_timeout(&self.address, TIMEOUT) {
-                            *self.socket.borrow_mut() = socket;
-                            tracing::info!("Reconnected to socket");
-                        } else {
-                            tracing::info!("Failed to reconnect to socket {}", error);
+                        match connected_socket(&self.address) {
+                            Ok(socket) => {
+                                *self.socket.borrow_mut() = socket;
+                                tracing::info!("reconnected, retrying");
+                            }
+                            Err(e) => {
+                                tracing::error!("error reconnecting: {}", e.kind());
+                            }
                         }
                     } else {
                         return Err(error);
@@ -67,9 +70,6 @@ impl DurableStream {
     pub fn read(&self, buf: &mut [u8]) -> Result<usize, io::Error> {
         self.with_reconnect(|| {
             let mut socket = self.socket.borrow_mut();
-            socket
-                .set_read_timeout(Some(TIMEOUT))
-                .expect("Non-zero read timeout");
             socket.read(buf)
         })
     }
@@ -77,18 +77,12 @@ impl DurableStream {
     pub fn write(&self, buf: &[u8]) -> Result<usize, io::Error> {
         self.with_reconnect(|| {
             let mut socket = self.socket.borrow_mut();
-            socket
-                .set_write_timeout(Some(TIMEOUT))
-                .expect("Non-zero write timeout");
             socket.write(buf)
         })
     }
 
     pub fn drain(&self, buffer: &mut [u8]) {
         let mut socket = self.socket.borrow_mut();
-        socket
-            .set_read_timeout(Some(Duration::from_millis(1)))
-            .expect("Non-zero read timeout");
         loop {
             match socket.read(buffer) {
                 Ok(n) if n != 0 => continue,
@@ -110,4 +104,16 @@ fn is_disconnect_error(err: &io::Error) -> bool {
         | NotConnected | AddrInUse | AddrNotAvailable | BrokenPipe | AlreadyExists | WouldBlock => true,
         _ => false,
     }
+}
+
+fn connected_socket(address: &SocketAddr) -> Result<TcpStream, io::Error> {
+    let connect_timeout = Duration::from_millis(10000);
+    let rw_timeout = Duration::from_millis(5000);
+
+    let socket = TcpStream::connect_timeout(&address, connect_timeout)?;
+
+    socket.set_read_timeout(Some(rw_timeout)).expect("couldn't set read timeout");
+    socket.set_write_timeout(Some(rw_timeout)).expect("couldn't set write timeout");
+
+    Ok(socket)
 }
