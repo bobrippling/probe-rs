@@ -30,6 +30,7 @@ impl DurableStream {
         &self,
         operation: &str,
         mut func: impl FnMut() -> Result<usize, io::Error>,
+        shortcircuit_wouldblock: bool,
     ) -> Result<usize, io::Error> {
         for attempt in 1..=ATTEMPTS {
             match func() {
@@ -37,6 +38,10 @@ impl DurableStream {
 
                 Err(error) => {
                     if error.kind() == ErrorKind::WouldBlock {
+                        if shortcircuit_wouldblock {
+                            return Ok(0);
+                        }
+
                         if attempt < ATTEMPTS {
                             // don't reconnect - we're connected and there's just nothing
                             // in the tcp stream
@@ -86,16 +91,20 @@ impl DurableStream {
     }
 
     pub fn read(&self, buf: &mut [u8]) -> Result<usize, io::Error> {
-        self.with_reconnect("read", || self.socket.borrow_mut().read(buf))
+        self.with_reconnect("read", || self.socket.borrow_mut().read(buf), false)
     }
 
     pub fn write(&self, buf: &[u8]) -> Result<usize, io::Error> {
-        self.with_reconnect("write", || self.socket.borrow_mut().write(buf))
+        self.with_reconnect("write", || self.socket.borrow_mut().write(buf), false)
     }
 
     pub fn drain(&self, buf: &mut [u8]) {
-        if let Err(e) = self.read(buf) {
-            tracing::warn!("socket drain: {}", e.kind());
+        match self.with_reconnect("drain", || self.socket.borrow_mut().read(buf), true) {
+            Ok(_count) => {}
+            Err(e) if e.kind() == ErrorKind::WouldBlock => unreachable!(),
+            Err(e) => {
+                tracing::warn!("socket drain: {}", e.kind());
+            }
         }
     }
 }
