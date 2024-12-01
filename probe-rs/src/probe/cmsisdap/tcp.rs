@@ -18,7 +18,10 @@ pub struct DurableStream {
 impl DurableStream {
     pub fn new(address: &impl ToSocketAddrs) -> Result<Self, io::Error> {
         let address = address.to_socket_addrs()?.next().expect("A valid address");
-        let socket = connected_socket(&address)?;
+        let socket = connected_socket(&address).map_err(|e| {
+            tracing::error!("connect: {e:?}");
+            e
+        })?;
 
         return Ok(DurableStream {
             address,
