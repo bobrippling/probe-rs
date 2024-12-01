@@ -34,11 +34,23 @@ impl DurableStream {
         for attempt in 1..=ATTEMPTS {
             match func() {
                 Ok(count) => return Ok(count),
+
                 Err(error) => {
-                    tracing::error!("{operation} on socket: {}", error.kind());
-                    if !is_disconnect_error(&error) {
-                        return Err(error);
+                    if error.kind() == ErrorKind::WouldBlock {
+                        if attempt < ATTEMPTS {
+                            // don't reconnect - we're connected and there's just nothing
+                            // in the tcp stream
+                            tracing::warn!("{operation} timeout, waiting...");
+                            continue;
+                        }
+
+                        // give up on this stream, fall through and reconnect
+
+                    } else if !is_disconnect_error(&error) {
+                        return Err(error)
                     }
+
+                    tracing::warn!("{operation} on socket: {}", error.kind());
 
                     // in lieu of dropping the socket:
                     let sockref = self.socket.borrow();
@@ -96,7 +108,7 @@ fn is_disconnect_error(err: &io::Error) -> bool {
 
     match err.kind() {
         NotFound | PermissionDenied | ConnectionRefused | ConnectionReset | ConnectionAborted
-        | NotConnected | AddrInUse | AddrNotAvailable | BrokenPipe | AlreadyExists | WouldBlock => true,
+        | NotConnected | AddrInUse | AddrNotAvailable | BrokenPipe | AlreadyExists | InvalidInput => true,
         _ => false,
     }
 }
