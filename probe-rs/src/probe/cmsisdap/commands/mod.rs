@@ -406,15 +406,24 @@ fn send_command_inner<Req: Request>(
             tracing::error!("write()");
             e
         })?;
+        // TODO: catch EPIPE ^
+
         trace_buffer("Transmit buffer", &buffer[..size]);
 
         // Read back response.
-        let bytes_read = device.read(&mut buffer).map_err(|e| {
-            tracing::error!("read()");
-            e
-        })?;
+        let bytes_read = device.read(&mut buffer);
 
-        break bytes_read;
+        match bytes_read {
+            Ok(x) => break x,
+            Err(SendError::Timeout) => {
+                // TODO: only do this for CmsisDapDevice::Tcp
+                tracing::warn!("timeout when sending command (id {:?}), retrying", Req::COMMAND_ID);
+            }
+            Err(e) => {
+                tracing::error!("read() error in send_command_inner loop");
+                return Err(e);
+            }
+        }
     };
 
     let response_data = &buffer[..bytes_read];
