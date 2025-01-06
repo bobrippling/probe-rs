@@ -400,18 +400,23 @@ fn send_command_inner<Req: Request>(
         size = *report_size + 1;
     }
 
-    // Send buffer to the device.
-    let _ = device.write(&buffer[..size]).map_err(|e| {
-        tracing::error!("write()");
-        e
-    })?;
-    trace_buffer("Transmit buffer", &buffer[..size]);
+    let bytes_read = loop {
+        // Send buffer to the device.
+        let _ = device.write(&buffer[..size]).map_err(|e| {
+            tracing::error!("write()");
+            e
+        })?;
+        trace_buffer("Transmit buffer", &buffer[..size]);
 
-    // Read back response.
-    let bytes_read = device.read(&mut buffer).map_err(|e| {
-        tracing::error!("read()");
-        e
-    })?;
+        // Read back response.
+        let bytes_read = device.read(&mut buffer).map_err(|e| {
+            tracing::error!("read()");
+            e
+        })?;
+
+        break bytes_read;
+    };
+
     let response_data = &buffer[..bytes_read];
     trace_buffer("Receive buffer", response_data);
 
