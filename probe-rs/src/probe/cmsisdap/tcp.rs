@@ -8,7 +8,7 @@ use std::{
     time::Duration,
 };
 
-const ATTEMPTS: usize = 5;
+const ATTEMPTS: usize = 1; //5;
 
 pub struct DurableStream {
     address: SocketAddr,
@@ -59,6 +59,9 @@ impl DurableStream {
                     }
 
                     tracing::warn!("{operation} on socket: {}", error.kind());
+
+                    // don't reconnect if it's a read/write - only if we're disconnected
+                    return Err(ErrorKind::TimedOut.into());
 
                     // in lieu of dropping the socket:
                     let sockref = self.socket.borrow();
