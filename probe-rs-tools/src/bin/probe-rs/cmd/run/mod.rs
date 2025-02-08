@@ -328,12 +328,30 @@ impl RunLoop {
             }
         };
 
-        let return_reason = loop {
+        let return_reason = 'status: loop {
             // check for halt first, poll rtt after.
             // this is important so we do one last poll after halt, so we flush all messages
             // the core printed before halting, such as a panic message.
             let mut return_reason = None;
-            match core.status()? {
+            let status = match core.status() {
+                Ok(s) => Ok(s),
+                Err(e) => {
+                    // FIXME: i'm not proud of this
+
+                    let s = format!("{e:?}");
+                    if s.find("ProbeSpecific").is_some() && s.find("Timeout").is_some() {
+                        eprintln!("got timeout while waiting for core status, retrying (assuming we've reconnected)");
+
+                        todo!("re-establish state etc here")
+
+                        continue 'status;
+                    }
+
+                    Err(e)
+                },
+            };
+
+            match status? {
                 probe_rs::CoreStatus::Halted(reason) => match predicate(reason, core) {
                     Ok(Some(r)) => return_reason = Some(Ok(ReturnReason::Predicate(r))),
                     Err(e) => return_reason = Some(Err(e)),
