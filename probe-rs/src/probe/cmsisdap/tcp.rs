@@ -8,7 +8,7 @@ use std::{
     time::Duration,
 };
 
-const ATTEMPTS: usize = 1; //5;
+const ATTEMPTS: usize = 5;
 
 pub struct DurableStream {
     address: SocketAddr,
@@ -29,108 +29,60 @@ impl DurableStream {
         });
     }
 
-    fn with_reconnect(
-        &self,
-        operation: &str,
-        mut func: impl FnMut() -> Result<usize, io::Error>,
-        shortcircuit_wouldblock: bool,
-    ) -> Result<usize, io::Error> {
-        for attempt in 1..=ATTEMPTS {
-            match func() {
-                Ok(count) => return Ok(count),
-
-                Err(error) => {
-                    if error.kind() == ErrorKind::WouldBlock {
-                        if shortcircuit_wouldblock {
-                            return Ok(0);
-                        }
-
-                        if attempt < ATTEMPTS {
-                            // don't reconnect - we're connected and there's just nothing
-                            // in the tcp stream
-                            tracing::warn!("{operation} timeout, waiting...");
-                            continue;
-                        }
-
-                        // give up on this stream, fall through and reconnect
-
-                    } else if !is_disconnect_error(&error) {
-                        return Err(error)
+    pub fn read(&self, buf: &mut [u8]) -> Result<usize, io::Error> {
+        let mut sockref = self.socket.borrow_mut();
+        match sockref.read(buf) {
+            Ok(n) => Ok(n),
+            Err(timeout_err) if timeout_err.kind() == ErrorKind::TimedOut => {
+                // we timed out, maybe better checks here, but essentially:
+                // - reconnect, then re-raise the error
+                // - higher level code will retry the core.status() call (where a write needs reissuing)
+                //   and because we've reconnected, it'll work
+                if let Err(e) = sockref.shutdown(Shutdown::Both) {
+                    if e.kind() != ErrorKind::NotConnected {
+                        tracing::warn!("reconnect: couldn't shutdown existing socket: {}", e.kind());
                     }
+                }
 
-                    tracing::warn!("{operation} on socket: {}", error.kind());
-
-                    // don't reconnect if it's a read/write - only if we're disconnected
-                    return Err(ErrorKind::TimedOut.into());
-
-                    // in lieu of dropping the socket:
-                    let sockref = self.socket.borrow();
-                    if let Err(e) = sockref.shutdown(Shutdown::Both) {
-                        if e.kind() != ErrorKind::NotConnected {
-                            tracing::warn!("couldn't shutdown existing socket: {}", e.kind());
-                        }
-                    }
-                    drop(sockref);
-
-                    tracing::trace!(
-                        "reconnect attempt {}/{}...",
-                        attempt,
-                        ATTEMPTS,
-                    );
-
+                for attempt in 0..ATTEMPTS {
                     match connected_socket(&self.address) {
                         Ok(socket) => {
-                            *self.socket.borrow_mut() = socket;
-                            tracing::debug!("reconnected, retrying {operation}");
+                            *sockref = socket;
+                            tracing::warn!("reconnect: success, established");
+                            break
                         }
                         Err(e) => {
-                            tracing::error!("error reconnecting: {}", e.kind());
+                            tracing::error!("reconnect ({attempt}/{ATTEMPTS}): {}", e.kind());
+                            continue
                         }
                     }
                 }
-            }
-        }
-        Err(io::Error::new(
-            ErrorKind::TimedOut,
-            format!("Failed to reconnect ({} attempts)", ATTEMPTS),
-        ))
-    }
 
-    pub fn read(&self, buf: &mut [u8]) -> Result<usize, io::Error> {
-        self.with_reconnect("read", || self.socket.borrow_mut().read(buf), false)
+                tracing::error!("giving up reconnect");
+                Err(timeout_err)
+            }
+            Err(e) => Err(e),
+        }
     }
 
     pub fn write(&self, buf: &[u8]) -> Result<usize, io::Error> {
-        self.with_reconnect("write", || self.socket.borrow_mut().write(buf), false)
+        self.socket.borrow_mut().write(buf)
     }
 
     pub fn drain(&self, buf: &mut [u8]) {
-        match self.with_reconnect("drain", || self.socket.borrow_mut().read(buf), true) {
-            Ok(_count) => {}
-            Err(e) if e.kind() == ErrorKind::WouldBlock => unreachable!(),
+        match self.socket.borrow_mut().read(buf) {
+            Ok(_n) => {}
+            Err(e) if e.kind() == ErrorKind::WouldBlock => {}
             Err(e) => {
-                tracing::warn!("socket drain: {}", e.kind());
+                tracing::error!("ignoring error during draing: {e:?}");
             }
         }
-    }
-}
-
-// The following is heavily inspired by -
-// https://github.com/craftytrickster/stubborn-io/blob/bda25e38345f7bc2886877897ba70c2742867df1/src/tokio/io.rs#L27C5-L43C6
-
-fn is_disconnect_error(err: &io::Error) -> bool {
-    use ErrorKind::*;
-
-    match err.kind() {
-        NotFound | PermissionDenied | ConnectionRefused | ConnectionReset | ConnectionAborted
-        | NotConnected | AddrInUse | AddrNotAvailable | BrokenPipe | AlreadyExists | InvalidInput => true,
-        _ => false,
     }
 }
 
 fn connected_socket(address: &SocketAddr) -> Result<TcpStream, io::Error> {
-    let connect_timeout = Duration::from_millis(10000);
-    let rw_timeout = Duration::from_millis(5000);
+    let connect_timeout = Duration::from_millis(30000);
+    let rw_timeout = Duration::from_millis(2000);
 
     let socket = TcpStream::connect_timeout(&address, connect_timeout)?;
 

@@ -1,4 +1,4 @@
-//! Sequences for Nrf52 devices
+//! Sequences for Raspberry Pi devices
 
 use std::sync::Arc;
 use std::thread;
@@ -40,7 +40,6 @@ impl ArmDebugSequence for Rp2040 {
         _core_type: probe_rs_target::CoreType,
         _debug_base: Option<u64>,
     ) -> Result<(), ArmError> {
-        tracing::warn!("rp2040: resetting SIO and processors");
         tracing::debug!("rp2040: resetting SIO and processors");
         interface.write_word_32(PSM_WDSEL, PSM_SEL_SIO | PSM_SEL_PROC0 | PSM_SEL_PROC1)?;
         interface.write_word_32(WATCHDOG_CTRL, WATCHDOG_CTRL_ENABLE)?;
@@ -49,7 +48,6 @@ impl ArmDebugSequence for Rp2040 {
         // random sleep. No idea if this is needed.
         thread::sleep(Duration::from_millis(100));
 
-        tracing::warn!("rp2040: reset done");
         tracing::debug!("rp2040: reset done");
 
         interface

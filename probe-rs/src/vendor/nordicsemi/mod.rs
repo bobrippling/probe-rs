@@ -14,7 +14,7 @@ use crate::{
     },
     config::{registry, DebugSequence},
     vendor::{
-        nordicsemi::sequences::{nrf52::Nrf52, nrf53::Nrf5340, nrf91::Nrf9160, rp2040::Rp2040},
+        nordicsemi::sequences::{nrf52::Nrf52, nrf53::Nrf5340, nrf91::Nrf9160},
         Vendor,
     },
     Error,
@@ -34,12 +34,6 @@ impl Vendor for NordicSemi {
             DebugSequence::Arm(Nrf52::create())
         } else if chip.name.starts_with("nRF9160") {
             DebugSequence::Arm(Nrf9160::create())
-        } else if chip.name == "RP2040" {
-            // exact match to not include RP2040_SELFDEBUG
-            // since in that case we really want to reset core0 only,
-            // not both (which is what the sequence does).
-            tracing::warn!("Using custom sequence for RP2040");
-            DebugSequence::Arm(Rp2040::create())
         } else {
             return None;
         };
